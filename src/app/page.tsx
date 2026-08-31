@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  Activity, AlertTriangle, Bell, BookOpen, BriefcaseBusiness, CheckCircle2,
+  Activity, AlertTriangle, Bell, BookOpen, BriefcaseBusiness,
   ChevronDown, CircleDollarSign, Clock3, Database, Download, FileText,
   LayoutDashboard, LifeBuoy, Menu, MoreHorizontal, Search, Settings,
   ShieldCheck, Sparkles, Users, X, Zap,
