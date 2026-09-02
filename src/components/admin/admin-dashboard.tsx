@@ -1,56 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from "react";
-import { useRouter } from "next/navigation";
 import {
-  Activity,
   Bell,
-  BookOpen,
   BrainCircuit,
-  BriefcaseBusiness,
   CalendarDays,
   ChevronDown,
-  CircleDollarSign,
   Database,
   Download,
   FileClock,
   FileText,
-  Headphones,
   Inbox,
-  LayoutDashboard,
   Menu,
   MoreVertical,
   Search,
-  Settings,
   ShieldCheck,
   Users,
-  X,
-  Zap,
 } from "lucide-react";
 import type { AdminOverview } from "@/lib/admin-data";
+import { SharedSidebar } from "@/components/admin/shared-sidebar";
 
 type Icon = ComponentType<{ size?: number; strokeWidth?: number }>;
 type Tone = "blue" | "green" | "purple" | "orange";
-
-const navigation: { label: string; items: [string, Icon][] }[] = [
-  { label: "MAIN", items: [["Overview", LayoutDashboard], ["Users", Users], ["Documents", FileText], ["Processing", FileClock], ["AI Analysis", BrainCircuit], ["Risks & Obligations", ShieldCheck], ["Templates", BookOpen], ["Lawyers & Firms", BriefcaseBusiness]] },
-  { label: "BUSINESS", items: [["Subscriptions & Billing", CircleDollarSign], ["Credits & Usage", Zap]] },
-  { label: "SUPPORT", items: [["Support Requests", Headphones], ["Reports & Exports", Download]] },
-  { label: "SYSTEM", items: [["Audit Logs", Activity], ["System Settings", Settings]] },
-];
-
-function Brand() {
-  return <div className="brand"><span className="brand-logo"><ShieldCheck size={21} strokeWidth={2}/></span><div><strong>LegallyBinding.AI</strong><small>Admin Panel</small></div></div>;
-}
-
-function SystemStatusCard() {
-  return <div className="system-card"><div className="system-heading"><span className="health-dot"/><strong>System Status</strong></div><span className="system-operational"><i/>Operational</span><p>Admin API connected</p><div className="system-divider"/><div className="api-status"><strong>API Status</strong><span>Connected</span></div><svg viewBox="0 0 180 34" aria-hidden="true"><path d="M1 27 10 27 18 23 27 25 36 19 45 21 54 12 63 22 72 8 81 19 90 13 99 24 108 19 117 20 126 14 135 20 144 16 153 20 162 24 179 29"/></svg><small>Live connection</small></div>;
-}
-
-function AdminSidebar({ open, close }: { open: boolean; close: () => void }) {
-  const router = useRouter();
-  return <aside className={`admin-sidebar ${open ? "open" : ""}`}><div className="sidebar-brand"><Brand/><button className="close-nav" onClick={close} aria-label="Close navigation"><X size={18}/></button></div><nav>{navigation.map(group => <section key={group.label}><h3>{group.label}</h3>{group.items.map(([label, ItemIcon]) => <button key={label} className={label === "Overview" ? "active" : ""} aria-current={label === "Overview" ? "page" : undefined} onClick={() => { if (label === "Users") router.push("/users"); close(); }}><ItemIcon size={17} strokeWidth={1.85}/><span>{label}</span></button>)}</section>)}</nav><SystemStatusCard/></aside>;
-}
 
 function AdminTopbar({ menu, query, setQuery, exportData }: { menu: () => void; query: string; setQuery: (value: string) => void; exportData: () => void }) {
   const searchRef = useRef<HTMLInputElement>(null);
@@ -72,15 +43,14 @@ function MetricCard({ label, value, icon: MetricIcon, tone, untracked, sparkPoin
 
 function Metrics({ data }: { data: AdminOverview }) {
   const cumulative = useMemo(() => data.growth.slice(-14).reduce<readonly (readonly [number, number])[]>((points, point, index, rows) => {
-    const previous = points.at(-1)?.[1] ?? 0;
     const x = rows.length === 1 ? 0 : index * 170 / (rows.length - 1);
-    return [...points, [x, previous + point.users] as const];
+    return [...points, [x, point.total] as const];
   }, []), [data.growth]);
   const max = Math.max(1, ...cumulative.map(([, value]) => value));
   const userSpark = cumulative.map(([x, value]) => `${x},${28 - value / max * 23}`).join(" ");
   const rows: { label: string; value: string; icon: Icon; tone: Tone; untracked?: boolean; sparkPoints?: string }[] = [
     { label: "Total Users", value: String(data.metrics.totalUsers), icon: Users, tone: "blue", sparkPoints: userSpark || undefined },
-    { label: "Active Users", value: "", icon: ShieldCheck, tone: "green", untracked: data.metrics.activeUsers == null },
+    { label: "Active Users", value: String(data.metrics.activeUsers ?? 0), icon: ShieldCheck, tone: "green" },
     { label: "Documents Uploaded", value: String(data.metrics.documentsUploaded), icon: FileText, tone: "blue" },
     { label: "Documents Processed", value: String(data.metrics.documentsProcessed), icon: FileClock, tone: "purple" },
     { label: "AI Analyses Completed", value: String(data.metrics.analysesCompleted), icon: BrainCircuit, tone: "purple" },
@@ -92,7 +62,7 @@ function Metrics({ data }: { data: AdminOverview }) {
 function UserGrowthCard({ data }: { data: AdminOverview }) {
   const values = data.growth.slice(-30);
   if (!values.length) return <section className="panel user-growth"><CardHeader title="User Growth" period="Last 30 days"/><EmptyState title="No growth data yet" copy="User history will appear as accounts are created."/></section>;
-  const series = values.reduce<(typeof values[number] & { total: number })[]>((points, value) => [...points, { ...value, total: (points.at(-1)?.total ?? 0) + value.users }], []);
+  const series = values;
   const max = Math.max(1, ...series.flatMap(value => [value.total, value.users]));
   const width = 620, height = 144, top = 7, bottom = 13;
   const point = (value: number, index: number) => `${series.length === 1 ? width / 2 : index * width / (series.length - 1)},${top + (max - value) / max * (height - top - bottom)}`;
@@ -125,8 +95,7 @@ function RecentDocumentsCard({ data, query }: { data: AdminOverview; query: stri
 }
 
 function ProcessingQueueCard({ data }: { data: AdminOverview }) {
-  const activeJobs = data.queue.jobs.filter(job => job.progress < 100);
-  return <section className="panel processing-queue"><CardHeader title="Processing Queue" action="View all"/><div className="queue-totals"><div><strong>{data.queue.inQueue}</strong><span>In Queue</span></div><div><strong>{data.queue.processing}</strong><span>Processing</span></div><div><strong>{data.queue.failed}</strong><span>Failed</span></div></div><h3>Current Jobs</h3>{activeJobs.length ? <div className="job-list">{activeJobs.map(job => <div className="job-row" key={job.id}><span className="file-chip"><FileText size={13}/></span><div className="job-name"><strong>{job.name}</strong><small title={job.owner}>{job.owner}</small></div><span className={`job-state ${job.progress > 0 ? "processing" : "queued"}`}>{job.progress > 0 ? "Processing" : "Queued"}</span></div>)}</div> : <EmptyState title="No active jobs" copy="The processing queue is currently idle."/>}</section>;
+  return <section className="panel processing-queue"><CardHeader title="Processing Queue" action="View all"/><div className="queue-totals"><div><strong>{data.queue.inQueue}</strong><span>In Queue</span></div><div><strong>{data.queue.processing}</strong><span>Processing</span></div><div><strong>{data.queue.failed}</strong><span>Failed</span></div></div><h3>Current Jobs</h3>{data.queue.jobs.length ? <div className="job-list">{data.queue.jobs.map(job => <div className="job-row" key={job.id}><span className="file-chip"><FileText size={13}/></span><div className="job-name"><strong>{job.name}</strong><small title={`${job.stage} · ${job.owner}`}>{job.stage}</small></div><span className={`job-state ${job.status}`}>{job.status === "processing" ? "Processing" : "Queued"}</span></div>)}</div> : <EmptyState title="No active jobs" copy="The processing queue is currently idle."/>}</section>;
 }
 
 function RiskSummaryCard({ data }: { data: AdminOverview }) {
@@ -151,5 +120,5 @@ export function AdminDashboard() {
   const load = () => { setError(""); setData(null); requestDashboard().then(setData).catch(reason => setError(reason instanceof Error ? reason.message : "Unable to load dashboard")); };
   useEffect(() => { requestDashboard().then(setData).catch(reason => setError(reason instanceof Error ? reason.message : "Unable to load dashboard")); }, []);
   const exportData = () => { if (!data) return; const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = `legallybinding-admin-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(url); };
-  return <div className="admin-shell"><AdminSidebar open={menuOpen} close={() => setMenuOpen(false)}/>{menuOpen && <button className="sidebar-backdrop" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}<main className="admin-main"><AdminTopbar menu={() => setMenuOpen(true)} query={query} setQuery={setQuery} exportData={exportData}/>{!data && !error ? <DashboardSkeleton/> : error ? <div className="dashboard-content"><div className="page-heading"><h1>Overview</h1><p>Live operational data from LegallyBinding.AI.</p></div><section className="panel overview-error"><ShieldCheck size={27}/><strong>Unable to load dashboard data</strong><p>{error}</p><button onClick={load}>Retry</button></section></div> : data && <div className="dashboard-content"><div className="page-heading"><h1>Overview</h1><p>Live operational data from LegallyBinding.AI.</p></div><Metrics data={data}/><div className="analytics-grid"><UserGrowthCard data={data}/><DocumentStatusCard data={data}/><AIUsageCard/></div><div className="operations-grid"><RecentDocumentsCard data={data} query={query}/><ProcessingQueueCard data={data}/><RiskSummaryCard data={data}/></div><AuditLogCard data={data}/></div>}</main></div>;
+  return <div className="admin-shell"><SharedSidebar open={menuOpen} close={() => setMenuOpen(false)}/>{menuOpen && <button className="sidebar-backdrop" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}<main className="admin-main"><AdminTopbar menu={() => setMenuOpen(true)} query={query} setQuery={setQuery} exportData={exportData}/>{!data && !error ? <DashboardSkeleton/> : error ? <div className="dashboard-content"><div className="page-heading"><h1>Overview</h1><p>Live operational data from LegallyBinding.AI.</p></div><section className="panel overview-error"><ShieldCheck size={27}/><strong>Unable to load dashboard data</strong><p>{error}</p><button onClick={load}>Retry</button></section></div> : data && <div className="dashboard-content"><div className="page-heading"><h1>Overview</h1><p>Live operational data from LegallyBinding.AI.</p></div><Metrics data={data}/><div className="analytics-grid"><UserGrowthCard data={data}/><DocumentStatusCard data={data}/><AIUsageCard/></div><div className="operations-grid"><RecentDocumentsCard data={data} query={query}/><ProcessingQueueCard data={data}/><RiskSummaryCard data={data}/></div><AuditLogCard data={data}/></div>}</main></div>;
 }
