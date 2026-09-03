@@ -125,8 +125,9 @@ export default function AIAnalysisPage() {
       </section>
 
       <section className="panel section-data-panel">
-        <div className="section-toolbar">
-          <div><strong>Analysis records</strong><span>{data.total} matching results</span></div>
+        <div className="section-toolbar analysis-toolbar">
+          <label className="analysis-search"><FileSearch size={16}/><input value={query} onChange={event => changeQuery(event.target.value)} placeholder="Search by document, owner or type..."/></label>
+          <div className="analysis-toolbar-spacer" />
           <label className="section-filter-label">Risk level
             <select value={risk} onChange={event => changeRisk(event.target.value)}>
               <option value="all">All risk levels</option>
@@ -135,6 +136,9 @@ export default function AIAnalysisPage() {
               <option value="low">Low</option>
             </select>
           </label>
+          <button className="analysis-filter-placeholder" type="button" disabled>Document type <span>All types⌄</span></button>
+          <button className="analysis-filter-placeholder" type="button" disabled>Owner <span>All owners⌄</span></button>
+          <button className="analysis-filter-placeholder" type="button" disabled>Model <span>All models⌄</span></button>
         </div>
 
         <div className="section-table-wrap">
