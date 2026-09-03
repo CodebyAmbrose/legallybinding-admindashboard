@@ -6,6 +6,8 @@ import { getClerkUserActivityMetrics } from "@/lib/clerk-user-metrics";
 const PAGE_SIZE = 1_000;
 const statusNames = ["uploaded", "queued", "processing", "completed", "failed"] as const;
 const queueStatusNames = ["queued", "processing", "failed"] as const;
+const OVERVIEW_CACHE_MS = 15_000;
+let overviewCache: { expiresAt: number; payload: unknown } | null = null;
 
 const relativeTime = (value: string) => {
   const seconds = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 1_000));
@@ -34,6 +36,9 @@ async function getStorageBytes() {
 export async function GET() {
   const access = await requireAdmin();
   if (!access.ok) return NextResponse.json({ error: access.status === 401 ? "Authentication required" : "Admin access required" }, { status: access.status });
+  if (overviewCache && overviewCache.expiresAt > Date.now()) {
+    return NextResponse.json(overviewCache.payload, { headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" } });
+  }
   try {
     const database = getAdminSupabase();
     const reportingStart = new Date();
@@ -85,7 +90,7 @@ export async function GET() {
     });
     const auditRows = audit.data ?? [];
 
-    return NextResponse.json({
+    const payload = {
       metrics: { totalUsers: userActivity.totalUsers, activeUsers: userActivity.activeUsers, documentsUploaded: totalDocs.count ?? 0, documentsProcessed: processed.count ?? 0, analysesCompleted: analyses.count ?? 0, storageBytes, totalRisks: risks.count ?? 0, highRisks: highRisks.count ?? 0, mediumRisks: mediumRisks.count ?? 0, lowRisks: lowRisks.count ?? 0, obligations: obligations.count ?? 0 },
       status: Object.fromEntries(statusNames.map((name, index) => [name, statusResults[index].count ?? 0])),
       documents,
@@ -93,7 +98,9 @@ export async function GET() {
       audit: auditRows.map(row => ({ id: row.id, action: row.action, user: row.owner_clerk_id, target: row.entity_type, details: JSON.stringify(row.metadata ?? {}), ip: String(row.metadata?.ip_address ?? "—"), time: relativeTime(row.created_at) })),
       growth: userActivity.dailyGrowth,
       aiUsage: null,
-    });
+    };
+    overviewCache = { expiresAt: Date.now() + OVERVIEW_CACHE_MS, payload };
+    return NextResponse.json(payload, { headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" } });
   } catch (error) {
     const detail = error instanceof Error ? error.message : JSON.stringify(error);
     console.error("Admin overview query failed", detail);
