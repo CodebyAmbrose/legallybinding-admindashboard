@@ -358,6 +358,18 @@
 .findings-toolbar .toolbar-result-count strong { color: #172b4d; font-size: 16px; }
 .due-date-value { color: #d97706; font-weight: 600; }
 .muted-value { color: #94a3b8; }
+.analysis-table { min-width: 1180px; }
+.analysis-table th { height: 42px; padding: 10px 16px; }
+.analysis-table td { height: 58px; padding: 8px 16px; font-size: 10.5px; }
+.analysis-table .section-primary-cell { min-width: 210px; gap: 8px; }
+.analysis-table .section-file-icon { width: 28px; height: 28px; flex-basis: 28px; }
+.analysis-table .section-primary-cell strong { max-width: 230px; font-size: 11.5px; }
+.analysis-table .section-primary-cell span { max-width: 230px; font-size: 9.5px; }
+.analysis-table .owner-identity { min-width: 150px; }
+.analysis-table .finding-count { font-size: 10.5px; }
+.analysis-table .model-cell strong { font-size: 10.5px; }
+.analysis-table .model-cell span { font-size: 9px; }
+.analysis-table .risk-badge { height: 21px; padding: 0 8px; font-size: 9.5px; }
 .section-detail-backdrop { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: flex-end; background: rgba(7,26,56,.28); }
 .section-detail-drawer { width: min(480px, 100%); height: 100%; overflow-y: auto; padding: 30px; background: #fff; box-shadow: -14px 0 36px rgba(7,26,56,.16); }
 .section-detail-close { float: right; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #52647a; }
