@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from "react";
-import { UserButton, useClerk, useUser } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import {
   Bell,
   BrainCircuit,
@@ -28,8 +28,6 @@ function CurrentAdminProfile() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
-  const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || "Admin";
-  const role = user?.publicMetadata?.role ? String(user.publicMetadata.role) : "Administrator";
   return <div className="admin-profile-wrap"><button className="admin-profile" onClick={() => setOpen(value => !value)} aria-expanded={open} aria-label="Open account menu"><span className="admin-avatar">{user?.imageUrl ? <img src={user.imageUrl} alt=""/> : name.slice(0, 2).toUpperCase()}</span><div><b title={name}>{name}</b><small>{role}</small></div><ChevronDown size={14}/></button>{open && <div className="admin-account-menu"><button onClick={() => signOut({ redirectUrl: "/" })}>Sign out</button></div>}</div>;
 }
 
