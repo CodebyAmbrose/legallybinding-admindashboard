@@ -632,5 +632,10 @@ html,body{overflow-x:hidden}
   .section-table-footer>div,.documents-pagination>div,.processing-pagination{width:100%;justify-content:flex-end}
   .section-table-footer>div span{display:none}
   .section-detail-drawer,.document-detail,.processing-detail-drawer{width:100%;padding:20px 16px}
-  .donut-layout{justify-content:flex-start;overflow-x:auto}
+.donut-layout{justify-content:flex-start;overflow-x:auto}
+}
+
+@media (min-width: 1401px) and (max-width: 1750px){
+  .metric-top{align-items:flex-start;line-height:1.2}
+  .metric-top>span:last-child{white-space:normal;overflow-wrap:anywhere}
 }
