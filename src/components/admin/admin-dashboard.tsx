@@ -38,9 +38,14 @@ function AdminTopbar(props: { menu: () => void; query: string; setQuery: (value:
   return <header className="admin-topbar"><button className="mobile-menu" onClick={menu} aria-label="Open navigation"><Menu size={20}/></button><label className="global-search"><Search size={17}/><input ref={searchRef} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search documents, owners, actions..."/><kbd>⌘K</kbd></label><div className="topbar-actions"><button className="topbar-control" aria-label="Dashboard reporting period"><CalendarDays size={16}/><span>All time</span><ChevronDown size={13}/></button><button className="topbar-control" onClick={exportData}><Download size={16}/><span>Export</span><ChevronDown size={13}/></button><button className="notification" aria-label="Notifications"><Bell size={19}/></button><AdminUserMenu/></div></header>;
 }
 
+function PeriodSelect({ value }: { value: string }) {
+  const [period, setPeriod] = useState(value);
+  return <label className="period-select"><select value={period} onChange={event => setPeriod(event.target.value)} aria-label={`${value} reporting period`}><option>Last 7 days</option><option>Last 30 days</option><option>Last 90 days</option><option>All time</option></select><ChevronDown size={12}/></label>;
+}
+
 function CardHeader({ title, period, action, actionHref }: { title: string; period?: string; action?: string; actionHref?: string }) {
   const href = actionHref || ({ "Recent Documents": "/documents", "Processing Queue": "/processing", "Risk Summary": "/risks-obligations", "Recent Activity (Audit Log)": "/audit-logs" } as Record<string, string>)[title];
-  return <div className="panel-header"><h2>{title}</h2>{period ? <button className="period-button">{period}<ChevronDown size={12}/></button> : action ? href ? <Link className="panel-action" href={href}>{action}</Link> : <span className="panel-action">{action}</span> : null}</div>;
+  return <div className="panel-header"><h2>{title}</h2>{period ? <PeriodSelect value={period}/> : action ? href ? <Link className="panel-action" href={href}>{action}</Link> : <span className="panel-action">{action}</span> : null}</div>;
 }
 
 function EmptyState({ icon: EmptyIcon = Inbox, title, copy }: { icon?: Icon; title: string; copy: string }) {
