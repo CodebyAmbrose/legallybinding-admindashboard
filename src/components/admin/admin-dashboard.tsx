@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from "react";
+import { UserButton, useUser } from "@clerk/nextjs";
 import {
   Bell,
   BrainCircuit,
@@ -23,10 +24,27 @@ import { SharedSidebar } from "@/components/admin/shared-sidebar";
 type Icon = ComponentType<{ size?: number; strokeWidth?: number }>;
 type Tone = "blue" | "green" | "purple" | "orange";
 
-function AdminTopbar({ menu, query, setQuery, exportData }: { menu: () => void; query: string; setQuery: (value: string) => void; exportData: () => void }) {
+function CurrentAdminProfile() {
+  const { user } = useUser();
+  const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || "Admin";
+  const role = user?.publicMetadata?.role ? String(user.publicMetadata.role) : "Administrator";
+  return <div className="admin-profile"><UserButton appearance={{ elements: { avatarBox: "admin-avatar", userButtonPopoverCard: "admin-user-popover" } }} /><div><b title={name}>{name}</b><small>{role}</small></div><ChevronDown size={14}/></div>;
+}
+
+function LegacyAdminTopbar({ menu, query, setQuery, exportData }: { menu: () => void; query: string; setQuery: (value: string) => void; exportData: () => void }) {
   const searchRef = useRef<HTMLInputElement>(null);
   useEffect(() => { const onKey = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); searchRef.current?.focus(); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, []);
   return <header className="admin-topbar"><button className="mobile-menu" onClick={menu} aria-label="Open navigation"><Menu size={20}/></button><label className="global-search"><Search size={17}/><input ref={searchRef} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search documents, owners, actions..."/><kbd>⌘K</kbd></label><div className="topbar-actions"><button className="topbar-control" aria-label="Dashboard reporting period"><CalendarDays size={16}/><span>All time</span><ChevronDown size={13}/></button><button className="topbar-control" onClick={exportData}><Download size={16}/><span>Export</span><ChevronDown size={13}/></button><button className="notification" aria-label="Notifications"><Bell size={19}/></button><div className="admin-profile"><span>AR</span><div><b>Admin User</b><small>Super Admin</small></div><ChevronDown size={14}/></div></div></header>;
+}
+
+function AdminTopbar(props: { menu: () => void; query: string; setQuery: (value: string) => void; exportData: () => void }) {
+  const { menu, query, setQuery, exportData } = props;
+  const searchRef = useRef<HTMLInputElement>(null);
+  const { user } = useUser();
+  useEffect(() => { const onKey = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); searchRef.current?.focus(); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, []);
+  const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || "Admin";
+  const role = user?.publicMetadata?.role ? String(user.publicMetadata.role) : "Administrator";
+  return <header className="admin-topbar"><button className="mobile-menu" onClick={menu} aria-label="Open navigation"><Menu size={20}/></button><label className="global-search"><Search size={17}/><input ref={searchRef} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search documents, owners, actions..."/><kbd>⌘K</kbd></label><div className="topbar-actions"><button className="topbar-control" aria-label="Dashboard reporting period"><CalendarDays size={16}/><span>All time</span><ChevronDown size={13}/></button><button className="topbar-control" onClick={exportData}><Download size={16}/><span>Export</span><ChevronDown size={13}/></button><button className="notification" aria-label="Notifications"><Bell size={19}/></button><div className="admin-profile"><UserButton/><div><b title={name}>{name}</b><small>{role}</small></div><ChevronDown size={14}/></div></div></header>;
 }
 
 function CardHeader({ title, period, action }: { title: string; period?: string; action?: string }) {
