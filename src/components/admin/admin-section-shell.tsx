@@ -3,7 +3,6 @@
 import { useState, type ReactNode } from "react";
 import {
   Bell,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -13,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SharedSidebar } from "@/components/admin/shared-sidebar";
+import { AdminUserMenu } from "@/components/admin/admin-user-menu";
 
 export type OwnerIdentity = {
   id: string;
@@ -58,7 +58,7 @@ export function AdminSectionShell({
               <span>{refreshing ? "Refreshing" : "Refresh"}</span>
             </button>
             <button className="notification" aria-label="Notifications"><Bell size={19}/></button>
-            <div className="admin-profile"><span>AR</span><div><b>Admin User</b><small>Super Admin</small></div><ChevronDown size={14}/></div>
+            <AdminUserMenu/>
           </div>
         </header>
         <div className="dashboard-content admin-section-content">
