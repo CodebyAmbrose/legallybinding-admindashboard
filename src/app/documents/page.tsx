@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Activity, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, FileClock, FileImage, FileText, Filter, Menu, MoreVertical, RefreshCw, Search, ShieldCheck, TriangleAlert, Upload, X } from "lucide-react";
 import { SharedSidebar } from "@/components/admin/shared-sidebar";
+import { readAdminCache, writeAdminCache } from "@/lib/admin-cache";
 
 type DocumentRecord = { id: string; filename: string; original_filename: string; file_type: string; file_size: number; owner_clerk_id: string; status: string; classification: string | null; page_count: number | null; created_at: string; updated_at: string; error_message: string | null };
+type DocumentsCache = { documents: DocumentRecord[]; total: number };
+const DOCUMENTS_CACHE_KEY = "admin-documents-cache-v1";
 
 const formatFileSize = (bytes: number) => { if (!bytes) return "—"; if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`; return `${(bytes / (1024 * 1024)).toFixed(1)} MB`; };
 const titleCase = (value: string) => value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : "—";
@@ -50,9 +53,10 @@ function DocumentDetail({ document, close }: { document: DocumentRecord; close: 
 function DocumentsPageSkeleton() { return <div className="dashboard-content"><div className="heading-skeleton skeleton"/><div className="document-metrics">{Array.from({ length: 5 }, (_, index) => <div className="document-metric-card skeleton" key={index}/>)}</div><div className="panel skeleton document-skeleton-panel"/></div>; }
 
 export default function DocumentsPage() {
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]), [query, setQuery] = useState(""), [status, setStatus] = useState("all"), [page, setPage] = useState(0), [total, setTotal] = useState(0), [loading, setLoading] = useState(true), [error, setError] = useState(""), [menu, setMenu] = useState(false), [selected, setSelected] = useState<DocumentRecord | null>(null);
-  const load = () => { setLoading(true); setError(""); fetch(`/api/admin/documents?query=${encodeURIComponent(query)}&status=${status}&page=${page}`).then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error); setDocuments(body.documents); setTotal(body.total); }).catch(reason => setError(reason instanceof Error ? reason.message : "Unable to load documents")).finally(() => setLoading(false)); };
-  useEffect(() => { fetch(`/api/admin/documents?query=${encodeURIComponent(query)}&status=${status}&page=${page}`).then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error); setDocuments(body.documents); setTotal(body.total); }).catch(reason => setError(reason instanceof Error ? reason.message : "Unable to load documents")).finally(() => setLoading(false)); }, [query, status, page]);
+  const cached = readAdminCache<DocumentsCache>(DOCUMENTS_CACHE_KEY, { documents: [], total: 0 });
+  const [documents, setDocuments] = useState<DocumentRecord[]>(cached.documents), [query, setQuery] = useState(""), [status, setStatus] = useState("all"), [page, setPage] = useState(0), [total, setTotal] = useState(cached.total), [loading, setLoading] = useState(!cached.documents.length), [error, setError] = useState(""), [menu, setMenu] = useState(false), [selected, setSelected] = useState<DocumentRecord | null>(null);
+  const load = () => { setLoading(true); setError(""); fetch(`/api/admin/documents?query=${encodeURIComponent(query)}&status=${status}&page=${page}`).then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error); setDocuments(body.documents); setTotal(body.total); writeAdminCache(DOCUMENTS_CACHE_KEY, { documents: body.documents, total: body.total }); }).catch(reason => setError(reason instanceof Error ? reason.message : "Unable to load documents")).finally(() => setLoading(false)); };
+  useEffect(() => { let active = true; setLoading(true); fetch(`/api/admin/documents?query=${encodeURIComponent(query)}&status=${status}&page=${page}`).then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error); if (!active) return; setDocuments(body.documents); setTotal(body.total); writeAdminCache(DOCUMENTS_CACHE_KEY, { documents: body.documents, total: body.total }); setError(""); }).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "Unable to load documents"); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [query, status, page]);
   const visibleDocuments = useMemo(() => documents, [documents]);
   const start = visibleDocuments.length ? page * 25 + 1 : 0;
   const end = Math.min((page + 1) * 25, total);

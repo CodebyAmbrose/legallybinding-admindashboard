@@ -3,25 +3,27 @@
 import { useCallback, useDeferredValue, useEffect, useState } from "react";
 import { BookOpen, FileOutput, FileText, MoreVertical, Sparkles } from "lucide-react";
 import { fetchAdminJson } from "@/lib/admin-client";
+import { readAdminCache, writeAdminCache } from "@/lib/admin-cache";
 import { AdminSectionShell, DetailDrawer, DetailField, OwnerCell, SectionMetric, SectionPagination, TableState, formatAdminDate, humanize, type OwnerIdentity } from "@/components/admin/admin-section-shell";
 
 type DocumentSummary = { filename: string; original_filename: string; status: string; classification: string | null };
 type Generation = { id: string; owner_clerk_id: string; document_id: string; template_slug: string; template_version: string; output_format: "pdf" | "docx"; jurisdiction: string; created_at: string; document: DocumentSummary | null; owner: OwnerIdentity };
 type TemplateResponse = { generations: Generation[]; stats: { total: number; pdf: number; docx: number; recent: number }; total: number; page: number; pageSize: number };
 const emptyResponse: TemplateResponse = { generations: [], stats: { total: 0, pdf: 0, docx: 0, recent: 0 }, total: 0, page: 0, pageSize: 25 };
+const TEMPLATES_CACHE_KEY = "admin-templates-cache-v1";
 
 export default function TemplatesPage() {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [format, setFormat] = useState("all");
   const [page, setPage] = useState(0);
-  const [data, setData] = useState<TemplateResponse>(emptyResponse);
+  const [data, setData] = useState<TemplateResponse>(() => readAdminCache(TEMPLATES_CACHE_KEY, emptyResponse));
   const [selected, setSelected] = useState<Generation | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !readAdminCache<TemplateResponse>(TEMPLATES_CACHE_KEY, emptyResponse).generations.length);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const requestData = useCallback(() => { const params = new URLSearchParams({ query: deferredQuery, format, page: String(page) }); return fetchAdminJson<TemplateResponse>(`/api/admin/templates?${params}`); }, [deferredQuery, format, page]);
-  const applyData = useCallback((response: TemplateResponse) => { setData(response); setError(""); setLoading(false); }, []);
+  const applyData = useCallback((response: TemplateResponse) => { setData(response); writeAdminCache(TEMPLATES_CACHE_KEY, response); setError(""); setLoading(false); }, []);
   useEffect(() => { let current = true; requestData().then(response => { if (current) applyData(response); }).catch(reason => { if (current) { setError(reason instanceof Error ? reason.message : "Unable to load template activity"); setLoading(false); } }); return () => { current = false; }; }, [applyData, requestData]);
   const refresh = () => { setRefreshing(true); requestData().then(applyData).catch(reason => setError(reason instanceof Error ? reason.message : "Unable to load template activity")).finally(() => setRefreshing(false)); };
   const templateName = (slug: string) => humanize(slug);

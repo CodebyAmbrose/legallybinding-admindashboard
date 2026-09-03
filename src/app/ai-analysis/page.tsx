@@ -22,6 +22,7 @@ import {
   type OwnerIdentity,
 } from "@/components/admin/admin-section-shell";
 import { fetchAdminJson } from "@/lib/admin-client";
+import { readAdminCache, writeAdminCache } from "@/lib/admin-cache";
 
 type DocumentSummary = {
   id?: string;
@@ -65,15 +66,16 @@ const emptyResponse: AnalysisResponse = {
   page: 0,
   pageSize: 25,
 };
+const ANALYSIS_CACHE_KEY = "admin-ai-analysis-cache-v1";
 
 export default function AIAnalysisPage() {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [risk, setRisk] = useState("all");
   const [page, setPage] = useState(0);
-  const [data, setData] = useState<AnalysisResponse>(emptyResponse);
+  const [data, setData] = useState<AnalysisResponse>(() => readAdminCache(ANALYSIS_CACHE_KEY, emptyResponse));
   const [selected, setSelected] = useState<Analysis | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !readAdminCache<AnalysisResponse>(ANALYSIS_CACHE_KEY, emptyResponse).analyses.length);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
@@ -84,6 +86,7 @@ export default function AIAnalysisPage() {
 
   const applyData = useCallback((response: AnalysisResponse) => {
     setData(response);
+    writeAdminCache(ANALYSIS_CACHE_KEY, response);
     setError("");
     setLoading(false);
   }, []);

@@ -96,7 +96,7 @@ export function TableState({ loading, error, empty, retry }: {
   empty: boolean;
   retry: () => void;
 }) {
-  if (loading) return <div className="section-table-state"><span className="loading-ring"/><strong>Loading live data...</strong></div>;
+  if (loading && empty) return <div className="section-table-state"><span className="loading-ring"/><strong>Loading live data...</strong></div>;
   if (error) return <div className="section-table-state error-state"><strong>Unable to load data</strong><p>{error}</p><button onClick={retry}>Retry</button></div>;
   if (empty) return <div className="section-table-state"><strong>No records found</strong><p>Try changing the search or filters.</p></div>;
   return null;

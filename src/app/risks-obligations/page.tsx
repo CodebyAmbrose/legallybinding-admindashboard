@@ -4,11 +4,13 @@ import { useCallback, useDeferredValue, useEffect, useState } from "react";
 import { AlertTriangle, CalendarClock, CircleAlert, ListChecks, MoreVertical, ShieldCheck } from "lucide-react";
 import { AdminSectionShell, DetailDrawer, DetailField, OwnerCell, SectionMetric, SectionPagination, TableState, formatAdminDate, type OwnerIdentity } from "@/components/admin/admin-section-shell";
 import { fetchAdminJson } from "@/lib/admin-client";
+import { readAdminCache, writeAdminCache } from "@/lib/admin-cache";
 
 type DocumentSummary = { filename: string; original_filename: string; status: string; classification: string | null };
 type Finding = { id: string; kind: "risk" | "obligation"; document_id: string; title: string; severity?: "low" | "medium" | "high"; explanation: string; source_text: string | null; section_reference?: string | null; responsible_party?: string | null; due_date?: string | null; created_at: string; document: DocumentSummary | null; owner: OwnerIdentity };
 type FindingsResponse = { items: Finding[]; stats: { risks: number; high: number; medium: number; low: number; obligations: number }; total: number; page: number; pageSize: number; kind: "risk" | "obligation" };
 const emptyResponse: FindingsResponse = { items: [], stats: { risks: 0, high: 0, medium: 0, low: 0, obligations: 0 }, total: 0, page: 0, pageSize: 25, kind: "risk" };
+const FINDINGS_CACHE_KEY = "admin-findings-cache-v1";
 
 export default function RisksObligationsPage() {
   const [query, setQuery] = useState("");
@@ -16,13 +18,13 @@ export default function RisksObligationsPage() {
   const [kind, setKind] = useState<"risk" | "obligation">("risk");
   const [severity, setSeverity] = useState("all");
   const [page, setPage] = useState(0);
-  const [data, setData] = useState<FindingsResponse>(emptyResponse);
+  const [data, setData] = useState<FindingsResponse>(() => readAdminCache(FINDINGS_CACHE_KEY, emptyResponse));
   const [selected, setSelected] = useState<Finding | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !readAdminCache<FindingsResponse>(FINDINGS_CACHE_KEY, emptyResponse).items.length);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const requestData = useCallback(() => { const params = new URLSearchParams({ query: deferredQuery, kind, severity, page: String(page) }); return fetchAdminJson<FindingsResponse>(`/api/admin/risks-obligations?${params}`); }, [deferredQuery, kind, page, severity]);
-  const applyData = useCallback((response: FindingsResponse) => { setData(response); setError(""); setLoading(false); }, []);
+  const applyData = useCallback((response: FindingsResponse) => { setData(response); writeAdminCache(FINDINGS_CACHE_KEY, response); setError(""); setLoading(false); }, []);
   useEffect(() => { let current = true; requestData().then(response => { if (current) applyData(response); }).catch(reason => { if (current) { setError(reason instanceof Error ? reason.message : "Unable to load findings"); setLoading(false); } }); return () => { current = false; }; }, [applyData, requestData]);
   const refresh = () => { setRefreshing(true); requestData().then(applyData).catch(reason => setError(reason instanceof Error ? reason.message : "Unable to load findings")).finally(() => setRefreshing(false)); };
   const switchKind = (next: "risk" | "obligation") => { setKind(next); setPage(0); setLoading(true); setSelected(null); };

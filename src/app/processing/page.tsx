@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { SharedSidebar } from "@/components/admin/shared-sidebar";
+import { readAdminCache, writeAdminCache } from "@/lib/admin-cache";
 
 type Job = {
   id: string;
@@ -227,13 +228,14 @@ function ProcessingSkeleton() {
 }
 
 export default function ProcessingPage() {
-  const [jobs, setJobs] = useState<Job[]>([]);
   const [status, setStatus] = useState("all");
+  const cachedJobs = readAdminCache<Job[]>(`admin-processing-cache-v1-${status}`, []);
+  const [jobs, setJobs] = useState<Job[]>(cachedJobs);
   const [stage, setStage] = useState("all");
   const [provider, setProvider] = useState("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedJobs.length);
   const [error, setError] = useState("");
   const [menu, setMenu] = useState(false);
   const [menuId, setMenuId] = useState<string | null>(null);
@@ -249,7 +251,9 @@ export default function ProcessingPage() {
       const response = await fetch(`/api/admin/processing?status=${encodeURIComponent(status)}`);
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to load processing jobs");
-      setJobs(Array.isArray(body.jobs) ? body.jobs : []);
+      const nextJobs = Array.isArray(body.jobs) ? body.jobs : [];
+      setJobs(nextJobs);
+      writeAdminCache(`admin-processing-cache-v1-${status}`, nextJobs);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load processing jobs");
     } finally {
@@ -263,7 +267,7 @@ export default function ProcessingPage() {
       .then(async response => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Unable to load processing jobs");
-        if (!cancelled) setJobs(Array.isArray(body.jobs) ? body.jobs : []);
+        if (!cancelled) { const nextJobs = Array.isArray(body.jobs) ? body.jobs : []; setJobs(nextJobs); writeAdminCache(`admin-processing-cache-v1-${status}`, nextJobs); }
       })
       .catch(reason => {
         if (!cancelled) setError(reason instanceof Error ? reason.message : "Unable to load processing jobs");
