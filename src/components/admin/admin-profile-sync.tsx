@@ -17,7 +17,14 @@ export function AdminProfileSync() {
         profile.innerHTML = `<span class="admin-avatar">${user.imageUrl ? `<img src="${user.imageUrl}" alt="" />` : name.slice(0, 2).toUpperCase()}</span><div><b>${name}</b><small>${role}</small></div><span aria-hidden="true">⌄</span>`;
         profile.style.cursor = "pointer";
         profile.setAttribute("role", "button");
-        profile.onclick = () => signOut({ redirectUrl: "/" });
+        profile.onclick = async () => {
+          try {
+            await signOut();
+            window.location.replace("/");
+          } catch {
+            window.location.reload();
+          }
+        };
       });
     };
     update();

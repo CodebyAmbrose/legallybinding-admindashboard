@@ -8,6 +8,17 @@ export function AdminUserMenu() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const logout = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+      window.location.replace("/");
+    } catch {
+      setSigningOut(false);
+    }
+  };
   const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || "Admin";
   const role = user?.publicMetadata?.role ? String(user.publicMetadata.role) : "Administrator";
 
@@ -18,7 +29,7 @@ export function AdminUserMenu() {
         <div><b title={name}>{name}</b><small>{role}</small></div>
         <ChevronDown size={14}/>
       </button>
-      {open && <div className="admin-account-menu"><button onClick={() => signOut({ redirectUrl: "/" })}><LogOut size={14}/>Sign out</button></div>}
+      {open && <div className="admin-account-menu"><button onClick={logout} disabled={signingOut}><LogOut size={14}/>{signingOut ? "Signing out..." : "Sign out"}</button></div>}
     </div>
   );
 }
